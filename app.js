@@ -10,7 +10,7 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
-app.get("/track/:prompt/:keyword", trackController.trackKeyword);
+app.get("/track/:type/:prompt/:keyword", trackController.trackKeyword);
 
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`);
