@@ -5,27 +5,32 @@ const openai = new OpenAI({
   organization: process.env.OPENAI_ORG_ID,
 });
 
-async function getChatResponse(prompt) {
-  const stream = await openai.chat.completions.create({
-    model: process.env.OPENAI_MODEL ?? "gpt-4o-mini-2024-07-18",
-    messages: [{ role: "user", content: prompt }],
-    store: true,
-    stream: true,
-  });
+async function getChatResponse(prompt, model = "gpt-4o-mini") {
+  try {
+    const response = await openai.chat.completions.create({
+      model,
+      messages: [{ role: "user", content: prompt }],
+      store: false,
+      stream: false,
+    });
 
-  let response = "";
-  for await (const chunk of stream) {
-    response += chunk.choices[0]?.delta?.content || "";
+    return response?.choices[0]?.message?.content;
+  } catch (error) {
+    console.log(error);
+    return error.message || "Error: Unable to generate response";
   }
-  return response;
 }
 
 async function parseRankBasic(prompt, keyword) {
-  const response = await getChatResponse(prompt);
+  const response = await getChatResponse(
+    prompt +
+      "\nPlease response with the rank only. No explanatin needed. You must summarize all indexes and response based on the accurate data. Put it in this format.\n1. Tesla Model X\n2. Jeep Grand Cherokee\n3. ..."
+  );
   const rank = await getChatResponse(
     `What is the rank of this keyword "${keyword}" in this response?\nHere's the response: ${response}. Reply only with the rank number.`
   );
   return {
+    model: "gpt-4o-mini",
     response,
     rank: parseInt(rank),
   };
@@ -34,13 +39,16 @@ async function parseRankBasic(prompt, keyword) {
 async function parseRankSimple(prompt, keyword) {
   const response = await getChatResponse(
     prompt +
-      "\nPlease response with the rank only. No explanatin needed. You must summarize all indexes and response based on the accurate data. Put it in this format.\n1. Tesla Model X\n2. Jeep Grand Cherokee\n3. ..."
+      "\nPlease response with the rank only. No explanatin needed. You must summarize all indexes and response based on the accurate data. Put it in this format.\n1. Tesla Model X\n2. Jeep Grand Cherokee\n3. ...",
+    "gpt-4o-2024-11-20"
   );
 
   const rank = await getChatResponse(
-    `What is the rank of this keyword "${keyword}" in this response?\nHere's the response: ${response}. Reply only with the rank number.`
+    `What is the rank of this keyword "${keyword}" in this response?\nHere's the response: ${response}. Reply only with the rank number.`,
+    "gpt-4o-2024-11-20"
   );
   return {
+    model: "gpt-4o-2024-11-20",
     response,
     rank: parseInt(rank),
   };
@@ -71,11 +79,13 @@ exports.trackKeyword = async (req, res) => {
     return res.status(400).send("Invalid type parameter");
   }
 
+  const { model, response: detail, rank } = result;
+
   res.send(
-    `<pre>Type: ${type}\nPrompt: ${prompt}\nKeyword: ${keyword}\n\nRank: ${
-      result.rank ? result.rank : "Not Ranked"
+    `<pre>Model: ${model}\nType: ${type}\nPrompt: ${prompt}\nKeyword: ${keyword}\n\nRank: ${
+      rank ? rank : "Not Ranked"
     }\n\n${
-      process.env.DETAIL_SHOW === "true" ? `Details: \n${result.response}` : ""
+      process.env.DETAIL_SHOW === "true" ? `Details: \n${detail}` : ""
     }</pre>`
   );
 };
