@@ -34,13 +34,12 @@ async function parseRankBasic(prompt, keyword) {
 async function parseRankSimple(prompt, keyword) {
   const response = await getChatResponse(
     prompt +
-      "\nPlease response with the rank only. No explanatin needed. Put it in this format.\n1. Tesla Model X (2025)\n2. Jeep Grand Cherokee (2025)\n3. ..."
+      "\nPlease response with the rank only. No explanatin needed. You must summarize all indexes and response based on the accurate data. Put it in this format.\n1. Tesla Model X\n2. Jeep Grand Cherokee\n3. ..."
   );
 
   const rank = await getChatResponse(
     `What is the rank of this keyword "${keyword}" in this response?\nHere's the response: ${response}. Reply only with the rank number.`
   );
-  console.log(rank);
   return {
     response,
     rank: parseInt(rank),
